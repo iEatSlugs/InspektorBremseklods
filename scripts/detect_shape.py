@@ -1,44 +1,59 @@
 import cv2 as cv
 import numpy as np 
+from roi import klip_roi,  y_start, x_start, linjer_roi
 
+areal = 10000
+grænse = 170
+
+
+def srt_hvid(img):
+    roi = klip_roi(img)
+    gray = cv.cvtColor(roi, cv.COLOR_BGR2GRAY)
+    gray = cv.GaussianBlur(gray, (5, 5), 0)
+    _, bw = cv.threshold(gray, grænse, 255, cv.THRESH_BINARY_INV)
+    kerne = cv.getStructuringElement(cv.MORPH_ELLIPSE, (5, 5))
+    bw = cv.morphologyEx(bw, cv.MORPH_OPEN, kerne)
+    return bw
+
+def find_centrum(kontur):
+    M = cv.moments(kontur)
+    x = int(M["m10"] / M["m00"])
+    y = int(M["m01"] / M["m00"])
+    return x, y
 
 def find_klodser(img):
-    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-    gray = cv.GaussianBlur(gray, (5, 5), 0)
-    h, w = gray.shape
-
-    bw = cv.adaptivethreshhold (gray, 255, cv.adaptivethreshhold(gray,255, cv.adaptive_thresh_mean_c, cv.thresh_binary_inv, 101,10))
-    bw = cv.morphologyex(bw, cv.morph_close, cv.getstructuringelement(cv.MORPH_ELLIPSE, (5,5)))
-    bw = cv.morphologyex(bw, cv.morph_close, cv.getstructuringelement(cv.MORPH_ELLIPSE, (15, 15)))
-    konturer, _ = cv.findContours(bw, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    bw = srt_hvid(img)
+    konturer, _ = cv.findContours(bw, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE,
+                                  offset=(x_start, y_start))
 
     klodser = []
-    for klods in konturer:
-        x, y, w, h = cv.boundingRect(klods)
-        if cv.contourArea(klods) < 20000 or x < 10 or y < 10 or x + w > w - 10 or y + h > h - 10:
+    for kontur in konturer:
+        if cv.contourArea(kontur) < areal:
             continue
 
-        approx = cv.approxPolyDP(klods, 0.005 * cv.arcLength(klods, True), True)
-
-        (cx, cy), (b, l), vinkel = cv.minAreaRect(klods)
-        if b < l:
-            vinkel += 90
-        vinkel %= 180
-
-        
-        klodser.append((cx, cy, vinkel))
-
-        cv.drawContours(img, [approx], 0, (0, 255, 0), 2)
-        cv.circle(img, (int(cx), int(cy)), 8, (0, 0, 255), -1)
-        cv.putText(img, f"X={cx:.0f} Y={cy:.0f} {vinkel:.0f} grader", (int(cx) - 120, int(cy) - 20),
-                    cv.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
-
-        
+        x, y = find_centrum(kontur)
+        klodser.append((kontur, x, y))
 
     return klodser
-if __name__ == "__main__": img = cv.imread("bremsklods1.jpg") 
-klodser = find_klodser(img)
-print(klodser)
-cv.imshow("Klodser", img)
-cv.waitKey(0)
-cv.destroyAllWindows()
+
+
+def tegn_klods(img, kontur, x, y, vinkel):
+    cv.drawContours(img, [kontur], 0, (0, 255, 0), 2)
+    cv.circle(img, (x, y), 6, (0, 0, 255), -1)
+    tekst = f"x={x} y={y} {vinkel:.0f}"
+    cv.putText(img, tekst, (x - 80, y - 15), cv.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
+    klodser = []
+
+    return klodser
+
+if __name__ == "__main__":
+    #img = cv.imread()
+
+    linjer_roi(img)
+    for kontur, x, y in find_klodser(img):
+        tegn_klods(img, kontur, x, y, 0)
+
+    #cv.imshow()
+    cv.waitKey(0)
+    cv.destroyAllWindows()
