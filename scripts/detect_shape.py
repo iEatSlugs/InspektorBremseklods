@@ -33,6 +33,8 @@ def find_klodser(img):
         cv.putText(img, f"X={cx:.0f} Y={cy:.0f} {vinkel:.0f} grader", (int(cx) - 120, int(cy) - 20),
                     cv.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
 
+        
+
     return klodser
 if __name__ == "__main__": img = cv.imread("bremsklods1.jpg") 
 klodser = find_klodser(img)
