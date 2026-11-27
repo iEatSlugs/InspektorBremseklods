@@ -46,14 +46,3 @@ def tegn_klods(img, kontur, x, y, vinkel):
     klodser = []
 
     return klodser
-
-if __name__ == "__main__":
-    img = cv.imread(r"c:\Users\PC User\Pictures\testbilleder\billede_20.jpg")
-
-    linjer_roi(img)
-    for kontur, x, y in find_klodser(img):
-        tegn_klods(img, kontur, x, y, 0)
-
-    cv.imshow("orale",img)
-    cv.waitKey(0)
-    cv.destroyAllWindows()
